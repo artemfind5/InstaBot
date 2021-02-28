@@ -6,7 +6,7 @@ import logging
 import json
 
 class InstaBot:
-    botversion = '0.05'
+    botversion = '0.07'
     """
     Instagram bot $botversion
     like_in_day=1000 - How many likes set bot in one day.
@@ -60,7 +60,7 @@ class InstaBot:
     def __init__(self, login, password,
                 like_per_day=100,
                 more_than_likes=10000,
-                tag_list=['photo', 'фотограф'],
+                tag_list=['cat', 'dog'],
                 max_like_for_one_tag = 5,
                 log_mod = 0):
         self.like_per_day = like_per_day
@@ -170,7 +170,7 @@ class InstaBot:
         except:
             self.write_log("Logout error!")
 
-    def get_media_id_by_tag(self, tag):
+    def get_media_id_by_tag (self, tag):
         """ Get media ID set, by your hashtag """
 
         if (self.login_status):
@@ -184,17 +184,16 @@ class InstaBot:
 
                     finder_text_start = ('<script type="text/javascript">'
                                          'window._sharedData = ')
-                    finder_text_start_len = len(finder_text_start) - 1
+                    finder_text_start_len = len(finder_text_start)-1
                     finder_text_end = ';</script>'
 
                     all_data_start = text.find(finder_text_start)
                     all_data_end = text.find(finder_text_end, all_data_start + 1)
                     json_str = text[(all_data_start + finder_text_start_len + 1) \
-                                    : all_data_end]
+                                   : all_data_end]
                     all_data = json.loads(json_str)
 
-                    self.media_by_tag = list(all_data['entry_data']['TagPage'][0] \
-                                                 ['tag']['media']['nodes'])
+                    self.media_by_tag = list(all_data['entry_data']['TagPage'][0]['graphql']['hashtag']['edge_hashtag_to_media']['edges'])
                 except:
                     self.media_by_tag = []
                     self.write_log("Exept on get_media!")
@@ -202,34 +201,34 @@ class InstaBot:
             else:
                 return 0
 
-    def like_all_exist_media(self, media_size=-1):
+    def like_all_exist_media (self, media_size=-1):
         """ Like all media ID that have self.media_by_tag """
 
         if (self.login_status):
             if self.media_by_tag != 0:
-                i = 0
+                i=0
                 for d in self.media_by_tag:
                     # Media count by this tag.
                     if media_size > 0 or media_size < 0:
                         media_size -= 1
-                        if (self.media_by_tag[i]['likes']['count'] < \
-                                self.more_than_likes):
-                            log_string = "Try to like media: %s" % \
-                                         (self.media_by_tag[i]['id'])
+                        if (self.media_by_tag[i]['node']['edge_liked_by']['count'] < \
+                            self.more_than_likes):
+                            log_string = "Try to like media: %s" %\
+                                         (self.media_by_tag[i]['node']['id'])
                             self.write_log(log_string)
-                            like = self.like(self.media_by_tag[i]['id'])
+                            like = self.like(self.media_by_tag[i]['node']['id'])
                             if like != 0:
                                 if like.status_code == 200:
                                     # Like, all ok!
                                     self.error_400 = 0
                                     self.like_conter += 1
-                                    log_string = "Liked: %s. Like #%i." % \
-                                                 (self.media_by_tag[i]['id'],
+                                    log_string = "Liked: %s. Like #%i." %\
+                                                 (self.media_by_tag[i]['node']['id'],
                                                   self.like_conter)
                                     self.write_log(log_string)
                                 elif like.status_code == 400:
                                     log_string = "Not liked: %i" \
-                                                 % (like.status_code)
+                                                  % (like.status_code)
                                     self.write_log(log_string)
                                     # Some error. If repeated - can be ban!
                                     if self.error_400 >= self.error_400_to_ban:
@@ -239,14 +238,14 @@ class InstaBot:
                                         self.error_400 += 1
                                 else:
                                     log_string = "Not liked: %i" \
-                                                 % (like.status_code)
+                                                  % (like.status_code)
                                     self.write_log(log_string)
                                     # Some error.
                                 i += 1
-                                time.sleep(self.like_delay * 0.9 +
-                                           self.like_delay * 0.2 * random.random())
-                        # else:
-                        # This media have to many likes!
+                                time.sleep(self.like_delay*0.9 +
+                                           self.like_delay*0.2*random.random())
+                        #else:
+                            # This media have to many likes!
             else:
                 self.write_log("No media to like!")
 
