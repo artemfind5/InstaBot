@@ -95,27 +95,52 @@ class InstaBot:
     def login(self):
         log_string = 'Try to login by %s...' % (self.user_login)
         self.write_log(log_string)
-        self.s.cookies.update({'sessionid': '', 'mid': '', 'ig_pr': '1',
-                               'ig_vw': '1920', 'csrftoken': '',
-                               's_network': '', 'ds_user_id': ''})
-        self.login_post = {'username': self.user_login,
-                           'password': self.user_password}
-        self.s.headers.update({'Accept-Encoding': 'gzip, deflate',
-                               'Accept-Language': self.accept_language,
-                               'Connection': 'keep-alive',
-                               'Content-Length': '0',
-                               'Host': 'www.instagram.com',
-                               'Origin': 'https://www.instagram.com',
-                               'Referer': 'https://www.instagram.com/',
-                               'User-Agent': self.user_agent,
-                               'X-Instagram-AJAX': '1',
-                               'X-Requested-With': 'XMLHttpRequest'})
+        self.s.cookies.update ({'sessionid' : '', 'mid' : '', 'ig_pr' : '1',
+                               'ig_vw' : '1920', 'csrftoken' : '',
+                               's_network' : '', 'ds_user_id' : ''})
+        self.login_post = {'username' : self.user_login,
+                           'password' : self.user_password}
+        self.s.headers.update ({'Accept-Encoding' : 'gzip, deflate',
+                               'Accept-Language' : self.accept_language,
+                               'Connection' : 'keep-alive',
+                               'Content-Length' : '0',
+                               'Host' : 'www.instagram.com',
+                               'Origin' : 'https://www.instagram.com',
+                               'Referer' : 'https://www.instagram.com/',
+                               'User-Agent' : self.user_agent,
+                               'X-Instagram-AJAX' : '1',
+                               'X-Requested-With' : 'XMLHttpRequest'})
         r = self.s.get(self.url)
-        self.s.headers.update({'X-CSRFToken': r.cookies['csrftoken']})
+        self.s.headers.update({'X-CSRFToken' : r.cookies['csrftoken']})
         time.sleep(5 * random.random())
-        login = self.s.post(self.url_login, data=self.login_post,
-                            allow_redirects=True)
-        self.s.headers.update({'X-CSRFToken': login.cookies['csrftoken']})
+
+        """Login to Instagram"""
+        timee = str(int(datetime.datetime.now().timestamp()))
+        enc_password = f"#PWD_INSTAGRAM_BROWSER:0:{timee}:{self.user_password}"
+
+        session = requests.Session()
+        # set a cookie that signals Instagram the "Accept cookie" banner was closed
+        session.cookies.set("ig_cb", "2")
+        session.headers.update({'user-agent': self.user_agent})
+        session.headers.update({'Referer': 'https://www.instagram.com'})
+        res = session.get('https://www.instagram.com')
+
+        csrftoken = None
+
+        for key in res.cookies.keys():
+            if key == 'csrftoken':
+                csrftoken = session.cookies['csrftoken']
+
+        session.headers.update({'X-CSRFToken': csrftoken})
+        login_data = {'username': self.user_login, 'enc_password': enc_password}
+
+        login = session.post('https://www.instagram.com/accounts/login/ajax/', data=login_data, allow_redirects=True)
+        print(self.login_post, login.text)
+        session.headers.update({'X-CSRFToken': login.cookies['csrftoken']})
+
+        self.s = session
+        self.s.headers.update({'X-CSRFToken' : login.cookies['csrftoken']})
+
         self.csrftoken = login.cookies['csrftoken']
         time.sleep(5 * random.random())
 
